@@ -55,7 +55,8 @@ export function getActivityStatus(
   duration: number,
   currentMinutes: number
 ): "upcoming" | "active" | "passed" {
-  const start = startTime === "00:00" ? 24 * 60 : timeToMinutes(startTime);
+  const MINUTES_IN_DAY = 1440;
+  const start = startTime === "00:00" ? MINUTES_IN_DAY : timeToMinutes(startTime);
   const end = duration > 0 ? start + duration : start + 1;
 
   if (currentMinutes < start) return "upcoming";

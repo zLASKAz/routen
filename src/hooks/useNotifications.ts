@@ -92,7 +92,7 @@ export function useNotifications(
     };
 
     checkNotifications();
-    intervalRef.current = setInterval(checkNotifications, 30000); // Check every 30s
+    intervalRef.current = setInterval(checkNotifications, 60000); // Check every 60s
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

@@ -16,7 +16,9 @@ import { Bell, BellOff, Plus } from "lucide-react";
 
 function getTodayKey(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const date = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${date}`;
 }
 
 export default function RoutineApp() {
