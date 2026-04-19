@@ -1,0 +1,24 @@
+{
+  "name": "Routn_ - Routine Tracker",
+  "short_name": "Routn_",
+  "description": "A sleek personal routine tracking app. Stay focused, stay on schedule.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090510",
+  "theme_color": "#090510",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
