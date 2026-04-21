@@ -11,14 +11,21 @@ import ActivityCard from "@/components/ActivityCard";
 import EditActivityModal from "@/components/EditActivityModal";
 import SundayRecharge from "@/components/SundayRecharge";
 import TimeProgress from "@/components/TimeProgress";
+import WeeklyStats, { getWeekKey } from "@/components/WeeklyStats";
+import CategoryFilter from "@/components/CategoryFilter";
+import MorningSummary from "@/components/MorningSummary";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, Plus } from "lucide-react";
+import { Bell, BellOff, Plus, BarChart2 } from "lucide-react";
 
 function getTodayKey(): string {
   const d = new Date();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const date = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${month}-${date}`;
+}
+
+function getMorningDismissKey(): string {
+  return `routn-morning-dismissed-${getTodayKey()}`;
 }
 
 export default function RoutineApp() {
@@ -33,6 +40,11 @@ export default function RoutineApp() {
   const [editActivity, setEditActivity] = useState<Activity | null>(null);
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [showAddHint, setShowAddHint] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<Activity["category"] | "all">("all");
+  const [morningSummaryDismissed, setMorningSummaryDismissed] = useState(
+    () => typeof window !== "undefined" && !!sessionStorage.getItem(getMorningDismissKey())
+  );
 
   const { requestPermission } = useNotifications(
     activities.map((a) => ({
@@ -48,6 +60,17 @@ export default function RoutineApp() {
     }
   }, []);
 
+  // Morning summary: show between 06:00–10:00 when today is selected
+  const showMorningSummary = useMemo(() => {
+    const currentHour = new Date().getHours();
+    return (
+      currentHour >= 6 &&
+      currentHour < 10 &&
+      selectedDay === currentDay &&
+      !morningSummaryDismissed
+    );
+  }, [selectedDay, currentDay, morningSummaryDismissed]);
+
   const handleToggleNotifications = async () => {
     if (notifEnabled) {
       setNotifEnabled(false);
@@ -57,6 +80,15 @@ export default function RoutineApp() {
     setNotifEnabled(granted);
   };
 
+  // Reset category filter when day changes
+  const handleSelectDay = useCallback(
+    (day: DayOfWeek) => {
+      setSelectedDay(day);
+      setCategoryFilter("all");
+    },
+    []
+  );
+
   const todayActivities = useMemo(
     () =>
       getActivitiesForDay(activities, selectedDay).map((a) => ({
@@ -64,6 +96,19 @@ export default function RoutineApp() {
         done: doneMap[a.id] || false,
       })),
     [activities, selectedDay, doneMap]
+  );
+
+  const filteredActivities = useMemo(
+    () =>
+      categoryFilter === "all"
+        ? todayActivities
+        : todayActivities.filter((a) => a.category === categoryFilter),
+    [todayActivities, categoryFilter]
+  );
+
+  const availableCategories = useMemo(
+    () => [...new Set(todayActivities.map((a) => a.category))],
+    [todayActivities]
   );
 
   const completedCount = todayActivities.filter((a) => a.done).length;
@@ -77,6 +122,27 @@ export default function RoutineApp() {
     },
     [setDoneMap]
   );
+
+  // Update weekly stats in localStorage when doneMap changes
+  useEffect(() => {
+    if (!doneLoaded) return;
+    try {
+      const weekKey = getWeekKey();
+      const raw = localStorage.getItem(weekKey);
+      const weekData: Partial<Record<DayOfWeek, { total: number; done: number }>> = raw
+        ? JSON.parse(raw)
+        : {};
+      const dayLabel = selectedDay;
+      const dayActivities = getActivitiesForDay(activities, selectedDay);
+      weekData[dayLabel] = {
+        total: dayActivities.length,
+        done: dayActivities.filter((a) => doneMap[a.id]).length,
+      };
+      localStorage.setItem(weekKey, JSON.stringify(weekData));
+    } catch {
+      // ignore storage errors
+    }
+  }, [doneMap, doneLoaded, activities, selectedDay]);
 
   const handleSaveActivity = useCallback(
     (updated: Activity) => {
@@ -108,6 +174,11 @@ export default function RoutineApp() {
     setActivities((prev) => [...prev, newActivity]);
     setEditActivity(newActivity);
   }, [selectedDay, setActivities]);
+
+  const handleDismissMorningSummary = useCallback(() => {
+    sessionStorage.setItem(getMorningDismissKey(), "1");
+    setMorningSummaryDismissed(true);
+  }, []);
 
   const isSunday = selectedDay === "sunday";
 
@@ -142,19 +213,28 @@ export default function RoutineApp() {
                 {selectedDay === currentDay ? " · Today" : ""}
               </p>
             </div>
-            <button
-              onClick={handleToggleNotifications}
-              className="w-10 h-10 rounded-xl bg-white/5 border border-purple-500/10 flex items-center justify-center text-purple-300/50 hover:text-purple-200 transition-colors"
-              title={
-                notifEnabled ? "Notifications on" : "Enable notifications"
-              }
-            >
-              {notifEnabled ? (
-                <Bell className="w-4.5 h-4.5" />
-              ) : (
-                <BellOff className="w-4.5 h-4.5" />
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowStats((v) => !v)}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-purple-500/10 flex items-center justify-center text-purple-300/50 hover:text-purple-200 transition-colors"
+                title="Weekly stats"
+              >
+                <BarChart2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleToggleNotifications}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-purple-500/10 flex items-center justify-center text-purple-300/50 hover:text-purple-200 transition-colors"
+                title={
+                  notifEnabled ? "Notifications on" : "Enable notifications"
+                }
+              >
+                {notifEnabled ? (
+                  <Bell className="w-4.5 h-4.5" />
+                ) : (
+                  <BellOff className="w-4.5 h-4.5" />
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -162,11 +242,23 @@ export default function RoutineApp() {
         <DaySelector
           currentDay={currentDay}
           selectedDay={selectedDay}
-          onSelectDay={setSelectedDay}
+          onSelectDay={handleSelectDay}
         />
+
+        {/* Weekly stats panel */}
+        {!isSunday && <WeeklyStats show={showStats} />}
 
         {/* Progress bar */}
         {selectedDay === currentDay && !isSunday && <TimeProgress />}
+
+        {/* Category filter */}
+        {!isSunday && (
+          <CategoryFilter
+            activeFilter={categoryFilter}
+            onFilter={setCategoryFilter}
+            availableCategories={availableCategories}
+          />
+        )}
 
         {/* Stats */}
         {!isSunday && todayActivities.length > 0 && (
@@ -188,6 +280,16 @@ export default function RoutineApp() {
             </div>
           </div>
         )}
+
+        {/* Morning summary */}
+        <AnimatePresence>
+          {showMorningSummary && !isSunday && (
+            <MorningSummary
+              activities={todayActivities}
+              onDismiss={handleDismissMorningSummary}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Timeline / Activities */}
         <div className="px-4 pt-2">
@@ -215,8 +317,14 @@ export default function RoutineApp() {
                       No activities for this day
                     </p>
                   </div>
+                ) : filteredActivities.length === 0 ? (
+                  <div className="text-center py-10">
+                    <p className="text-purple-300/30 text-sm">
+                      No activities in this category
+                    </p>
+                  </div>
                 ) : (
-                  todayActivities.map((activity, index) => (
+                  filteredActivities.map((activity, index) => (
                     <ActivityCard
                       key={activity.id}
                       activity={activity}

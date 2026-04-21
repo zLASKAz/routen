@@ -80,13 +80,17 @@ self.addEventListener("push", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SHOW_NOTIFICATION") {
     const { title, body, tag } = event.data;
-    self.registration.showNotification(title, {
-      body,
-      icon: "/icons/icon-192x192.png",
-      badge: "/icons/icon-192x192.png",
-      vibrate: [200, 100, 200],
-      tag: tag || "routn-notification",
-    });
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body,
+        icon: "/icons/icon-192x192.png",
+        badge: "/icons/icon-192x192.png",
+        vibrate: [200, 100, 200],
+        tag: tag || "routn-notification",
+        renotify: true,
+        requireInteraction: false,
+      })
+    );
   }
 });
 

@@ -28,6 +28,7 @@ export default function EditActivityModal({
   const [durationMinutes, setDurationMinutes] = useState(0);
   const [category, setCategory] = useState<Activity["category"]>("routine");
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([]);
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (activity) {
@@ -37,6 +38,7 @@ export default function EditActivityModal({
       setDurationMinutes(activity.duration % 60);
       setCategory(activity.category);
       setSelectedDays([...activity.days]);
+      setNotes(activity.notes || "");
     }
   }, [activity]);
 
@@ -55,6 +57,7 @@ export default function EditActivityModal({
       duration: durationHours * 60 + durationMinutes,
       category,
       days: selectedDays,
+      notes: notes.trim() || undefined,
     });
     onClose();
   };
@@ -188,6 +191,20 @@ export default function EditActivityModal({
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Notes */}
+                <div className="mb-4">
+                  <label className="text-xs font-medium text-purple-300/50 mb-1.5 block">
+                    Quick Note <span className="text-purple-500/40">(optional)</span>
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder="Add a reminder or note..."
+                    className="w-full bg-white/5 border border-purple-500/15 rounded-xl px-4 py-3 text-sm text-white placeholder-purple-400/30 focus:outline-none focus:border-purple-500/40 transition-colors resize-none"
+                  />
                 </div>
 
                 {/* Category */}
