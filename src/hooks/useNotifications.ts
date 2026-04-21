@@ -21,26 +21,31 @@ export function useNotifications(
   }, []);
 
   const sendNotification = useCallback(
-    (title: string, body: string, tag: string) => {
+    async (title: string, body: string, tag: string) => {
       if (!("Notification" in window)) return;
       if (Notification.permission !== "granted") return;
 
-      // Try service worker notification first for PWA
-      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: "SHOW_NOTIFICATION",
-          title,
-          body,
-          tag,
-        });
-      } else {
-        new Notification(title, {
-          body,
-          icon: "/icons/icon-192x192.png",
-          badge: "/icons/icon-192x192.png",
-          tag,
-        });
+      if ("serviceWorker" in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          await registration.showNotification(title, {
+            body,
+            icon: "/icons/icon-192x192.png",
+            badge: "/icons/icon-192x192.png",
+            tag,
+            renotify: true,
+            requireInteraction: false,
+          } as NotificationOptions);
+          return;
+        } catch {
+          // fall through to legacy Notification
+        }
       }
+      new Notification(title, {
+        body,
+        icon: "/icons/icon-192x192.png",
+        tag,
+      });
     },
     []
   );

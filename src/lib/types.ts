@@ -9,6 +9,7 @@ export interface Activity {
   icon: string; // lucide icon name
   days: DayOfWeek[];
   done: boolean;
+  notes?: string;
 }
 
 export interface DaySchedule {

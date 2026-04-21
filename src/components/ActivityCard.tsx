@@ -1,11 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Activity, CATEGORY_COLORS } from "@/lib/types";
 import {
   formatTime,
   formatDuration,
+  formatCountdown,
   getActivityStatus,
   getCurrentTimeMinutes,
+  timeToMinutes,
   cn,
 } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -70,6 +73,32 @@ export default function ActivityCard({
 
   const isActive = status === "active" && !activity.done;
   const isPassed = status === "passed" || activity.done;
+
+  // Countdown timer: compute seconds remaining from current time
+  const [secondsLeft, setSecondsLeft] = useState(() => {
+    const now = new Date();
+    const nowSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+    const endSecs = (timeToMinutes(activity.startTime) + activity.duration) * 60;
+    return Math.max(0, endSecs - nowSecs);
+  });
+
+  useEffect(() => {
+    if (!isActive || activity.duration <= 0) return;
+    const startTime = activity.startTime;
+    const duration = activity.duration;
+    const calcSeconds = () => {
+      const now = new Date();
+      const nowSecs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      const endSecs = (timeToMinutes(startTime) + duration) * 60;
+      return Math.max(0, endSecs - nowSecs);
+    };
+    const interval = setInterval(() => setSecondsLeft(calcSeconds()), 1000);
+    return () => clearInterval(interval);
+  }, [isActive, activity.startTime, activity.duration]);
+
+  const totalSeconds = activity.duration * 60;
+  const progressPercent =
+    totalSeconds > 0 ? Math.min(100, (secondsLeft / totalSeconds) * 100) : 0;
 
   return (
     <motion.div
@@ -180,6 +209,40 @@ export default function ActivityCard({
                 style={{ backgroundColor: `${color}60` }}
               />
             </div>
+
+            {/* Countdown timer */}
+            {isActive && activity.duration > 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                {secondsLeft <= 0 ? (
+                  <motion.span
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="text-xs font-mono text-emerald-400 tabular-nums"
+                  >
+                    Time&apos;s up! ✅
+                  </motion.span>
+                ) : (
+                  <>
+                    <span className="text-xs font-mono text-violet-300 tabular-nums">
+                      {formatCountdown(secondsLeft)}
+                    </span>
+                    <div className="flex-1 h-0.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-violet-500 to-purple-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Notes */}
+            {activity.notes && activity.notes.trim() && (
+              <p className="text-xs italic text-purple-300/40 mt-1 truncate">
+                {activity.notes}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
